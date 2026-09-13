@@ -5,47 +5,52 @@ import { useGame } from "@/context/GameContext";
 import { MEMORY_LEVELS } from "@/lib/data";
 import { Sparkles, Eye, Check, X, RotateCw, ArrowRight, BrainCircuit } from "lucide-react";
 
+const getLevelData = (lvlIdx: number) => {
+  const lvl = MEMORY_LEVELS[lvlIdx % MEMORY_LEVELS.length];
+  return {
+    lvl,
+    shuffled: [...lvl.words]
+  };
+};
+
 export default function MemoryGame() {
   const { addXP, recordAnswer, playSound } = useGame();
   
   const [levelIndex, setLevelIndex] = useState(0);
   const [stage, setStage] = useState<"memorize" | "recall" | "result">("memorize");
-  const [timerCount, setTimerCount] = useState(5);
+  const [timerCount, setTimerCount] = useState<number>(() => getLevelData(0).lvl.timeSeconds);
   const [userSequence, setUserSequence] = useState<string[]>([]);
-  const [availableChoices, setAvailableChoices] = useState<string[]>([]);
+  const [availableChoices, setAvailableChoices] = useState<string[]>(() => getLevelData(0).shuffled);
   const [isCorrect, setIsCorrect] = useState(false);
 
   const currentLevel = MEMORY_LEVELS[levelIndex % MEMORY_LEVELS.length];
 
   const startLevel = (lvlIdx: number) => {
-    const lvl = MEMORY_LEVELS[lvlIdx % MEMORY_LEVELS.length];
+    const { lvl, shuffled } = getLevelData(lvlIdx);
+    setLevelIndex(lvlIdx);
     setStage("memorize");
     setTimerCount(lvl.timeSeconds);
     setUserSequence([]);
     setIsCorrect(false);
-
-    const shuffled = [...lvl.words].sort(() => Math.random() - 0.5);
     setAvailableChoices(shuffled);
   };
 
   useEffect(() => {
-    startLevel(levelIndex);
-  }, [levelIndex]);
-
-  useEffect(() => {
     if (stage !== "memorize") return;
-    
-    if (timerCount <= 0) {
-      setStage("recall");
-      return;
-    }
 
     const interval = setInterval(() => {
-      setTimerCount(prev => prev - 1);
+      setTimerCount((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setStage("recall");
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [stage, timerCount]);
+  }, [stage]);
 
   const handleChipClick = (word: string) => {
     playSound("click");
@@ -75,7 +80,7 @@ export default function MemoryGame() {
 
   const handleNextLevel = () => {
     playSound("click");
-    setLevelIndex(prev => prev + 1);
+    startLevel(levelIndex + 1);
   };
 
   const handleRetry = () => {

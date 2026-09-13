@@ -93,11 +93,13 @@ export default function TranslatorBridge() {
     }
 
     if (!inputText.trim()) {
-      setTranslatedText("");
+      debounceTimerRef.current = setTimeout(() => {
+        setTranslatedText("");
+        setIsLoading(false);
+      }, 0);
       return;
     }
 
-    setIsLoading(true);
     debounceTimerRef.current = setTimeout(() => {
       performTranslation(inputText, sourceLang, targetLang, false);
     }, 450);
@@ -138,8 +140,34 @@ export default function TranslatorBridge() {
     playSound("click");
     if (typeof window === "undefined") return;
 
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
+    interface SpeechRecognitionResultItem {
+      transcript: string;
+    }
+    interface SpeechRecognitionResultList {
+      [index: number]: {
+        [index: number]: SpeechRecognitionResultItem;
+      };
+    }
+    interface SpeechRecognitionEvent {
+      results: SpeechRecognitionResultList;
+    }
+    interface SpeechRecognitionInstance {
+      lang: string;
+      interimResults: boolean;
+      onstart: () => void;
+      onend: () => void;
+      onerror: () => void;
+      onresult: (event: SpeechRecognitionEvent) => void;
+      start: () => void;
+    }
+
+    const SpeechRecognition = (window as unknown as {
+      SpeechRecognition?: new () => SpeechRecognitionInstance;
+      webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+    }).SpeechRecognition ||
+      (window as unknown as {
+        webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
+      }).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       alert("Voice recognition is not supported in this browser. You can type any word or sentence into the box!");
@@ -164,7 +192,7 @@ export default function TranslatorBridge() {
       recognition.onend = () => setIsListening(false);
       recognition.onerror = () => setIsListening(false);
 
-      recognition.onresult = (event: any) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInputText(transcript);
         performTranslation(transcript, sourceLang, targetLang, true);

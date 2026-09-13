@@ -1,41 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useGame } from "@/context/GameContext";
 import { MATCH_PAIRS_DATA, MatchPair } from "@/lib/data";
 import { Sparkles, Check, X, ArrowRight, Volume2 } from "lucide-react";
+
+const getRoundData = (index: number) => {
+  const pair = MATCH_PAIRS_DATA[index % MATCH_PAIRS_DATA.length];
+  const otherMeanings = MATCH_PAIRS_DATA
+    .filter(p => p.id !== pair.id)
+    .map(p => p.meaning)
+    .slice(0, 2);
+
+  const allChoices = [pair.meaning, ...otherMeanings];
+  return { pair, allChoices };
+};
 
 export default function MatchGame() {
   const { addXP, recordAnswer, playSound, speak } = useGame();
   
   const [round, setRound] = useState(0);
-  const [currentWord, setCurrentWord] = useState<MatchPair>(MATCH_PAIRS_DATA[0]);
-  const [options, setOptions] = useState<string[]>([]);
+  const [currentWord, setCurrentWord] = useState<MatchPair>(() => getRoundData(0).pair);
+  const [options, setOptions] = useState<string[]>(() => getRoundData(0).allChoices);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [streakCount, setStreakCount] = useState(0);
-
-  const initRound = (index: number) => {
-    const pair = MATCH_PAIRS_DATA[index % MATCH_PAIRS_DATA.length];
-    setCurrentWord(pair);
-    setSelectedOption(null);
-    setIsAnswered(false);
-    setIsCorrect(false);
-
-    const otherMeanings = MATCH_PAIRS_DATA
-      .filter(p => p.id !== pair.id)
-      .map(p => p.meaning)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 2);
-
-    const allChoices = [pair.meaning, ...otherMeanings].sort(() => Math.random() - 0.5);
-    setOptions(allChoices);
-  };
-
-  useEffect(() => {
-    initRound(round);
-  }, [round]);
 
   const handleSelectOption = (opt: string) => {
     if (isAnswered) return;
@@ -59,7 +49,14 @@ export default function MatchGame() {
 
   const handleNext = () => {
     playSound("click");
-    setRound(prev => prev + 1);
+    const nextRound = round + 1;
+    const { pair, allChoices } = getRoundData(nextRound);
+    setRound(nextRound);
+    setCurrentWord(pair);
+    setOptions(allChoices);
+    setSelectedOption(null);
+    setIsAnswered(false);
+    setIsCorrect(false);
   };
 
   return (

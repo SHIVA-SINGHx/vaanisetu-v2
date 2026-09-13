@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useGame } from "@/context/GameContext";
 import { PUZZLES_DATA, PuzzleItem } from "@/lib/data";
 import { 
@@ -13,36 +13,27 @@ import {
   Lightbulb
 } from "lucide-react";
 
+const getPuzzleData = (idx: number) => {
+  const puzzle = PUZZLES_DATA[idx % PUZZLES_DATA.length];
+  const chars = puzzle.scrambled.split("").map((char, index) => ({
+    char,
+    index,
+    used: false
+  }));
+  return { puzzle, chars };
+};
+
 export default function WordScrambleGame() {
   const { addXP, recordAnswer, playSound } = useGame();
   
   const [puzzleIndex, setPuzzleIndex] = useState(0);
-  const [currentPuzzle, setCurrentPuzzle] = useState<PuzzleItem>(PUZZLES_DATA[0]);
+  const [currentPuzzle, setCurrentPuzzle] = useState<PuzzleItem>(() => getPuzzleData(0).puzzle);
   const [selectedLetters, setSelectedLetters] = useState<{ char: string; originalIndex: number }[]>([]);
-  const [availableLetters, setAvailableLetters] = useState<{ char: string; index: number; used: boolean }[]>([]);
+  const [availableLetters, setAvailableLetters] = useState<{ char: string; index: number; used: boolean }[]>(() => getPuzzleData(0).chars);
   const [inputVal, setInputVal] = useState("");
   const [showHint, setShowHint] = useState(false);
   const [resultState, setResultState] = useState<"idle" | "correct" | "wrong">("idle");
   const [feedbackMsg, setFeedbackMsg] = useState("");
-
-  const initPuzzle = (item: PuzzleItem) => {
-    setCurrentPuzzle(item);
-    const chars = item.scrambled.split("").map((char, index) => ({
-      char,
-      index,
-      used: false
-    }));
-    setAvailableLetters(chars);
-    setSelectedLetters([]);
-    setInputVal("");
-    setShowHint(false);
-    setResultState("idle");
-    setFeedbackMsg("");
-  };
-
-  useEffect(() => {
-    initPuzzle(PUZZLES_DATA[puzzleIndex % PUZZLES_DATA.length]);
-  }, [puzzleIndex]);
 
   const handleTileClick = (letterObj: { char: string; index: number; used: boolean }) => {
     if (letterObj.used) return;
@@ -100,7 +91,16 @@ export default function WordScrambleGame() {
 
   const handleNextWord = () => {
     playSound("click");
-    setPuzzleIndex(prev => prev + 1);
+    const nextIdx = puzzleIndex + 1;
+    const { puzzle, chars } = getPuzzleData(nextIdx);
+    setPuzzleIndex(nextIdx);
+    setCurrentPuzzle(puzzle);
+    setAvailableLetters(chars);
+    setSelectedLetters([]);
+    setInputVal("");
+    setShowHint(false);
+    setResultState("idle");
+    setFeedbackMsg("");
   };
 
   return (

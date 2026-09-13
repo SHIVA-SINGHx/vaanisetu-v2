@@ -44,53 +44,41 @@ const defaultState: GameState = {
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<GameState>(defaultState);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setState((prev) => ({
-          ...prev,
-          ...parsed,
-          level: Math.floor((parsed.xp || 0) / 100) + 1
-        }));
+  const [state, setState] = useState<GameState>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          const today = new Date().toDateString();
+          let nextStreak = parsed.streak || 1;
+          if (parsed.lastDay && parsed.lastDay !== today) {
+            const prevDate = new Date(parsed.lastDay);
+            const curDate = new Date(today);
+            const diffDays = Math.floor((curDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) {
+              nextStreak = (parsed.streak || 1) + 1;
+            } else if (diffDays > 1) {
+              nextStreak = 1;
+            }
+          }
+          return {
+            ...defaultState,
+            ...parsed,
+            streak: nextStreak,
+            lastDay: today,
+            level: Math.floor((parsed.xp || 0) / 100) + 1
+          };
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
-    setIsHydrated(true);
-  }, []);
-
-  // Streak logic check
-  useEffect(() => {
-    if (!isHydrated) return;
-    const today = new Date().toDateString();
-    setState((prev) => {
-      if (prev.lastDay === today) return prev;
-      if (!prev.lastDay) {
-        return { ...prev, streak: 1, lastDay: today };
-      }
-      const prevDate = new Date(prev.lastDay);
-      const curDate = new Date(today);
-      const diffDays = Math.floor((curDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      let nextStreak = prev.streak;
-      if (diffDays === 1) {
-        nextStreak = prev.streak + 1;
-      } else if (diffDays > 1) {
-        nextStreak = 1;
-      }
-      return { ...prev, streak: nextStreak, lastDay: today };
-    });
-  }, [isHydrated]);
+    return defaultState;
+  });
 
   // Sync to localStorage
   useEffect(() => {
-    if (!isHydrated) return;
     try {
       localStorage.setItem(
         STORAGE_KEY,
@@ -107,7 +95,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-  }, [state, isHydrated]);
+  }, [state]);
 
   const triggerConfetti = () => {
     try {

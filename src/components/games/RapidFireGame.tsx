@@ -15,8 +15,26 @@ export default function RapidFireGame() {
   const [questionIdx, setQuestionIdx] = useState(0);
   const [isGameOver, setIsGameOver] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const scoreRef = useRef(0);
+  const highScoreRef = useRef(0);
 
   const currentQ: RapidQuestion = RAPID_FIRE_DATA[questionIdx % RAPID_FIRE_DATA.length];
+
+  const endGame = () => {
+    setIsPlaying(false);
+    setIsGameOver(true);
+    playSound("levelup");
+
+    const currentFinalScore = scoreRef.current;
+    if (currentFinalScore > 0) {
+      addXP(currentFinalScore * 5);
+    }
+    if (currentFinalScore > highScoreRef.current) {
+      highScoreRef.current = currentFinalScore;
+      setHighScore(currentFinalScore);
+      triggerConfetti();
+    }
+  };
 
   const startGame = () => {
     playSound("click");
@@ -24,6 +42,7 @@ export default function RapidFireGame() {
     setIsGameOver(false);
     setTimeLeft(30);
     setScore(0);
+    scoreRef.current = 0;
     setQuestionIdx(0);
 
     if (timerRef.current) clearInterval(timerRef.current);
@@ -40,25 +59,6 @@ export default function RapidFireGame() {
     }, 1000);
   };
 
-  const endGame = () => {
-    setIsPlaying(false);
-    setIsGameOver(true);
-    playSound("levelup");
-  };
-
-  useEffect(() => {
-    if (isGameOver) {
-      const earnedXP = score * 5;
-      if (score > 0) {
-        addXP(earnedXP);
-      }
-      if (score > highScore) {
-        setHighScore(score);
-        triggerConfetti();
-      }
-    }
-  }, [isGameOver, score]);
-
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -70,7 +70,9 @@ export default function RapidFireGame() {
 
     if (choiceIdx === currentQ.correctIndex) {
       playSound("success");
-      setScore(prev => prev + 1);
+      const nextScore = score + 1;
+      setScore(nextScore);
+      scoreRef.current = nextScore;
       recordAnswer(true);
     } else {
       playSound("error");
