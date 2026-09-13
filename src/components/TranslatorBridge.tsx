@@ -26,6 +26,7 @@ export default function TranslatorBridge() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [copied, setCopied] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -56,6 +57,7 @@ export default function TranslatorBridge() {
     }
 
     setIsLoading(true);
+    setTranslationError(null);
 
     try {
       const response = await fetch("/api/translate", {
@@ -74,13 +76,21 @@ export default function TranslatorBridge() {
         const data = await response.json();
         if (data.translation) {
           setTranslatedText(data.translation);
+          setTranslationError(null);
           if (grantXP) {
             addXP(5);
           }
+        } else {
+          // API returned null translation (network/external API failure)
+          setTranslatedText("");
+          setTranslationError("Translation unavailable right now. Please try again.");
         }
+      } else {
+        setTranslationError("Translation service error. Please try again.");
       }
     } catch (err) {
       console.error("Translation failed:", err);
+      setTranslationError("Could not reach translation service. Check your connection.");
     } finally {
       setIsLoading(false);
     }
@@ -350,6 +360,10 @@ export default function TranslatorBridge() {
                 {translatedText ? (
                   <p className="font-black text-xl sm:text-2xl text-[#155c48] tracking-tight leading-snug break-words">
                     {translatedText}
+                  </p>
+                ) : translationError ? (
+                  <p className="text-sm font-semibold text-red-500/80 italic flex items-center gap-1.5">
+                    ⚠️ {translationError}
                   </p>
                 ) : (
                   <p className="text-sm font-semibold text-[#5e7068]/60 italic">

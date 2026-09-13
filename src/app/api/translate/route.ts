@@ -56,35 +56,47 @@ export async function POST(request: NextRequest) {
 
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=${srcCode}|${tgtCode}`;
 
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "VAANISETU-App/2.0"
-      },
-      next: { revalidate: 3600 } // Cache results
-    });
+    // Abort if MyMemory takes more than 10 seconds
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.responseData && data.responseData.translatedText) {
-        let result = data.responseData.translatedText;
-        // Clean any HTML entities like &#39;
-        result = result
-          .replace(/&#39;/g, "'")
-          .replace(/&quot;/g, '"')
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">");
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "VAANISETU-App/2.0"
+        },
+        cache: "force-cache", // standard Fetch API caching (works in Next.js 15+)
+        signal: controller.signal
+      });
 
-        return NextResponse.json({
-          translation: result,
-          fromCache: false
-        });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.responseData && data.responseData.translatedText) {
+          let result = data.responseData.translatedText;
+          // Clean any HTML entities like &#39;
+          result = result
+            .replace(/&#39;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">");
+
+          return NextResponse.json({
+            translation: result,
+            fromCache: false
+          });
+        }
       }
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      console.error("MyMemory fetch error:", fetchErr);
     }
 
-    // Fallback if API response unexpected
+    // Fallback: explicitly return null so the UI can show a proper error
     return NextResponse.json({
-      translation: cleanText,
+      translation: null,
       error: "Could not fetch dynamic translation"
     });
   } catch (error) {
