@@ -1,5 +1,7 @@
 # 🌉 VAANISETU (वाणीसेतु • ᱵᱟᱬᱤ ᱥᱮᱛᱩ)
 ### *Bridging Indian Languages Through Interactive, Gamified Learning*
+<img width="1913" height="890" alt="VAANISETU-Where-Language-Meets-Learning-11-20-2026_11_44_PM" src="https://github.com/user-attachments/assets/2b886364-fe63-457c-9d68-bce3887b294a" />
+
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.3.4-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2.8-blue?style=for-the-badge&logo=react)](https://react.dev/)
